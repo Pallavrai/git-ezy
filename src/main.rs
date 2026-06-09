@@ -92,6 +92,16 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
                     eprintln!("Stage error: {e}");
                 }
             }
+            (KeyCode::Char('c'), _) if app.current_tab == 3 && app.focus == app::Focus::List => {
+                if let Some(branch) = app.branches.get(app.selected_branch) {
+                    let name = branch.name.clone();
+                    if !branch.is_current
+                        && let Err(e) = app.checkout_branch(&name)
+                    {
+                        eprintln!("Checkout error: {e}");
+                    }
+                }
+            }
             (KeyCode::Enter, _) => {
                 app.toggle_focus();
             }

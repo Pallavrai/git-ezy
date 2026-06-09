@@ -19,6 +19,14 @@ pub struct FileItem {
 }
 
 #[derive(Debug, Clone)]
+pub struct BranchEntry {
+    pub name: String,
+    pub is_current: bool,
+    pub oid: Oid,
+    pub upstream: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct CommitEntry {
     pub oid: Oid,
     pub hash: String,
@@ -50,6 +58,8 @@ pub struct App {
     pub diff_text: String,
     pub commit_detail: String,
     pub branch: String,
+    pub branches: Vec<BranchEntry>,
+    pub selected_branch: usize,
     pub scroll_offset: usize,
     pub focus: Focus,
 }
@@ -94,11 +104,14 @@ impl App {
             diff_text: String::new(),
             commit_detail: String::new(),
             branch,
+            branches: Vec::new(),
+            selected_branch: 0,
             scroll_offset: 0,
             focus: Focus::List,
         };
         app.refresh_status();
         app.load_commits();
+        app.load_branches();
         app
     }
 
@@ -155,6 +168,69 @@ impl App {
         index.write()?;
         self.refresh_status();
         self.update_diff()?;
+        Ok(())
+    }
+
+    pub fn load_branches(&mut self) {
+        self.branches.clear();
+        let repo = match &self.repo {
+            Some(r) => r,
+            None => return,
+        };
+        let current = self.branch.clone();
+        let branches = match repo.branches(Some(git2::BranchType::Local)) {
+            Ok(b) => b,
+            Err(_) => return,
+        };
+        for branch in branches.flatten() {
+            let (branch_ref, _) = branch;
+            let name = match branch_ref.name() {
+                Ok(Some(n)) => n.to_string(),
+                _ => continue,
+            };
+            let oid = match branch_ref.get().peel_to_commit() {
+                Ok(c) => c.id(),
+                Err(_) => continue,
+            };
+            let is_current = name == current;
+            let upstream = match branch_ref.upstream() {
+                Ok(b) => match b.name() {
+                    Ok(Some(n)) => Some(n.to_string()),
+                    _ => None,
+                },
+                Err(_) => None,
+            };
+            self.branches.push(BranchEntry {
+                name,
+                is_current,
+                oid,
+                upstream,
+            });
+        }
+        self.branches.sort_by(|a, _| {
+            if a.is_current {
+                std::cmp::Ordering::Less
+            } else {
+                std::cmp::Ordering::Greater
+            }
+        });
+        self.selected_branch = self
+            .selected_branch
+            .min(self.branches.len().saturating_sub(1));
+    }
+
+    pub fn checkout_branch(&mut self, name: &str) -> Result<()> {
+        let rev = format!("refs/heads/{name}");
+        {
+            let repo = self.repo.as_ref().unwrap();
+            let obj = repo.revparse_single(&rev)?;
+            repo.checkout_tree(&obj, None)?;
+            repo.set_head(&rev)?;
+        }
+        self.branch = name.to_string();
+        self.load_branches();
+        self.refresh_status();
+        self.load_commits();
         Ok(())
     }
 
@@ -385,6 +461,13 @@ impl App {
                     (self.selected_commit + 1) % self.commits.len();
                 self.update_commit_detail();
             }
+            3 => {
+                if self.branches.is_empty() {
+                    return;
+                }
+                self.selected_branch =
+                    (self.selected_branch + 1) % self.branches.len();
+            }
             _ => {}
         }
     }
@@ -417,6 +500,16 @@ impl App {
                 };
                 self.update_commit_detail();
             }
+            3 => {
+                if self.branches.is_empty() {
+                    return;
+                }
+                self.selected_branch = if self.selected_branch == 0 {
+                    self.branches.len() - 1
+                } else {
+                    self.selected_branch - 1
+                };
+            }
             _ => {}
         }
     }
@@ -445,6 +538,17 @@ impl App {
                     self.focus = Focus::List;
                 }
             }
+            3 => {
+                if self.branches.is_empty() {
+                    return;
+                }
+                if self.focus == Focus::List {
+                    self.scroll_offset = 0;
+                    self.focus = Focus::Detail;
+                } else {
+                    self.focus = Focus::List;
+                }
+            }
             _ => {}
         }
     }
@@ -453,6 +557,7 @@ impl App {
         self.current_tab = (self.current_tab + 1) % MENU_ITEMS.len();
         self.selected_index = 0;
         self.selected_commit = 0;
+        self.selected_branch = 0;
         self.focus = Focus::List;
         if self.current_tab == 0 || self.current_tab == 1 {
             let _ = self.update_diff();
@@ -470,6 +575,7 @@ impl App {
         };
         self.selected_index = 0;
         self.selected_commit = 0;
+        self.selected_branch = 0;
         self.focus = Focus::List;
         if self.current_tab == 0 || self.current_tab == 1 {
             let _ = self.update_diff();
@@ -519,6 +625,7 @@ impl App {
                 0 => "↑↓/PgUp/PgDn Scroll  Enter:List  q:Quit",
                 1 => "↑↓/PgUp/PgDn Scroll  Enter:List  q:Quit",
                 2 => "↑↓/PgUp/PgDn Scroll  Enter:List  q:Quit",
+                3 => "↑↓/PgUp/PgDn Scroll  Enter:List  q:Quit",
                 _ => "PgUp/PgDn Scroll  Tab:Switch  q:Quit",
             }
         } else {
@@ -526,6 +633,7 @@ impl App {
                 0 => "↑↓ Files  Enter:View → Detail  Tab:Switch  q:Quit",
                 1 => "↑↓ Files  Space:Stage  Enter:View → Detail  q:Quit",
                 2 => "↑↓ Commits  Enter:View → Detail  Tab:Switch  q:Quit",
+                3 => "↑↓ Branches  c:Checkout  Enter:View → Detail  q:Quit",
                 _ => "Tab:Switch  q:Quit",
             }
         };
@@ -597,7 +705,8 @@ impl App {
         match self.current_tab {
             0 | 1 => self.render_file_list(frame, area),
             2 => self.render_commit_list(frame, area),
-            _ => self.render_placeholder_list(frame, area),
+            3 => self.render_branch_list(frame, area),
+            _ => {}
         }
     }
 
@@ -746,22 +855,42 @@ impl App {
         frame.render_widget(list, area);
     }
 
-    fn render_placeholder_list(&self, frame: &mut Frame, area: Rect) {
-        let items: Vec<ListItem> = (0..MENU_ITEMS.len())
-            .map(|i| {
-                let selected = i == self.current_tab;
-                let style = if selected {
-                    Style::default()
-                        .fg(Color::Cyan)
-                        .add_modifier(Modifier::BOLD)
+    fn render_branch_list(&self, frame: &mut Frame, area: Rect) {
+        let title = format!(" Branches ({}) ", self.branches.len());
+        let items: Vec<ListItem> = self
+            .branches
+            .iter()
+            .enumerate()
+            .map(|(i, branch)| {
+                let selected = i == self.selected_branch;
+                let bg = if selected { Color::Cyan } else { Color::Reset };
+                let fg = if selected {
+                    Color::Black
+                } else if branch.is_current {
+                    Color::Green
                 } else {
-                    Style::default().fg(Color::Gray)
+                    Color::White
                 };
-                let prefix = if selected { "▶ " } else { "  " };
-                ListItem::new(Line::from(Span::styled(
-                    format!("{}{}", prefix, MENU_ITEMS[i]),
-                    style,
-                )))
+
+                let marker = if branch.is_current {
+                    " *"
+                } else {
+                    "  "
+                };
+                let name_style = Style::default()
+                    .fg(fg)
+                    .bg(bg)
+                    .add_modifier(
+                        if branch.is_current {
+                            Modifier::BOLD
+                        } else {
+                            Modifier::empty()
+                        },
+                    );
+                ListItem::new(Line::from(vec![Span::styled(
+                    format!("{marker} {}", branch.name),
+                    name_style,
+                )]))
             })
             .collect();
 
@@ -769,7 +898,7 @@ impl App {
             Block::default()
                 .borders(Borders::ALL)
                 .border_style(self.pane_border_style(false))
-                .title(format!(" {} ", self.active_menu_name()))
+                .title(title.as_str())
                 .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
         );
         frame.render_widget(list, area);
@@ -943,25 +1072,63 @@ impl App {
                     Text::from(all)
                 }
             }
-            3 => Text::from(vec![
-                Line::from(Span::styled(
-                    "  Branches",
-                    Style::default()
-                        .fg(Color::Cyan)
-                        .add_modifier(Modifier::BOLD),
-                )),
-                Line::from(""),
-                Line::from(Span::styled(
-                    "  Current branch:",
-                    Style::default().fg(Color::Gray),
-                )),
-                Line::from(Span::styled(
-                    format!("  {}", self.branch),
-                    Style::default()
-                        .fg(Color::Green)
-                        .add_modifier(Modifier::BOLD),
-                )),
-            ]),
+            3 => {
+                if self.branches.is_empty() {
+                    Text::from(Line::from(Span::styled(
+                        "  No branches found.",
+                        Style::default().fg(Color::Gray),
+                    )))
+                } else {
+                    let idx = self
+                        .selected_branch
+                        .min(self.branches.len().saturating_sub(1));
+                    let branch = &self.branches[idx];
+                    let current_tag = if branch.is_current {
+                        " (current)"
+                    } else {
+                        ""
+                    };
+                    Text::from(vec![
+                        Line::from(Span::styled(
+                            format!(" ◇ {}{}", branch.name, current_tag),
+                            Style::default()
+                                .fg(if branch.is_current {
+                                    Color::Green
+                                } else {
+                                    Color::Cyan
+                                })
+                                .add_modifier(Modifier::BOLD),
+                        )),
+                        Line::from(""),
+                        Line::from(vec![
+                            Span::styled(" Hash:    ", Style::default().fg(Color::Gray)),
+                            Span::styled(
+                                branch.oid.to_string(),
+                                Style::default().fg(Color::Yellow),
+                            ),
+                        ]),
+                        Line::from(vec![
+                            Span::styled(" Upstream:", Style::default().fg(Color::Gray)),
+                            Span::styled(
+                                format!(
+                                    " {}",
+                                    branch.upstream.as_deref().unwrap_or("(none)")
+                                ),
+                                Style::default().fg(Color::White),
+                            ),
+                        ]),
+                        Line::from(""),
+                        Line::from(Span::styled(
+                            if branch.is_current {
+                                "  This is the current branch."
+                            } else {
+                                "  Press 'c' to checkout this branch."
+                            },
+                            Style::default().fg(Color::Gray),
+                        )),
+                    ])
+                }
+            },
             _ => Text::from(Line::from(Span::raw(""))),
         };
 
