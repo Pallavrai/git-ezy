@@ -1,4 +1,8 @@
 mod app;
+mod git;
+mod tree;
+mod types;
+mod ui;
 
 use std::io;
 use std::sync::mpsc;
@@ -15,6 +19,7 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 
 use app::App;
+use types::Focus;
 
 fn main() -> Result<()> {
     let mut terminal = init_terminal()?;
@@ -92,7 +97,7 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
                     eprintln!("Stage error: {e}");
                 }
             }
-            (KeyCode::Char('c'), _) if app.current_tab == 3 && app.focus == app::Focus::List => {
+            (KeyCode::Char('c'), _) if app.current_tab == 3 && app.focus == Focus::List => {
                 if let Some(branch) = app.branches.get(app.selected_branch) {
                     let name = branch.name.clone();
                     if !branch.is_current
@@ -104,6 +109,23 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
             }
             (KeyCode::Enter, _) => {
                 app.toggle_focus();
+            }
+            (KeyCode::Char('c'), _)
+                if app.current_tab == 2
+                    && app.focus == Focus::List
+                    && !app.commit_message.is_empty() =>
+            {
+                if let Err(e) = app.perform_commit() {
+                    eprintln!("Commit error: {e}");
+                }
+            }
+            (KeyCode::Backspace, _) if app.current_tab == 2 && app.focus == Focus::List => {
+                app.commit_message.pop();
+            }
+            (KeyCode::Char(c), KeyModifiers::NONE)
+                if app.current_tab == 2 && app.focus == Focus::List =>
+            {
+                app.commit_message.push(c);
             }
             _ => {}
         }
