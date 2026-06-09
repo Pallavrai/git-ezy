@@ -24,10 +24,10 @@ fn main() -> Result<()> {
 
     thread::spawn(move || {
         loop {
-            if let Ok(event) = event::read() {
-                if tx_handle.send(event).is_err() {
-                    break;
-                }
+            if let Ok(event) = event::read()
+                && tx_handle.send(event).is_err()
+            {
+                break;
             }
         }
     });
@@ -81,15 +81,19 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
             (KeyCode::BackTab, _) | (KeyCode::Char('t'), KeyModifiers::SHIFT) => {
                 app.previous_tab();
             }
+            (KeyCode::PageDown, _) => {
+                app.scroll_down();
+            }
+            (KeyCode::PageUp, _) => {
+                app.scroll_up();
+            }
             (KeyCode::Char(' '), _) if app.current_tab == 1 => {
                 if let Err(e) = app.toggle_stage() {
                     eprintln!("Stage error: {e}");
                 }
             }
             (KeyCode::Enter, _) => {
-                if app.current_tab == 0 || app.current_tab == 1 {
-                    let _ = app.update_diff();
-                }
+                app.toggle_focus();
             }
             _ => {}
         }

@@ -22,6 +22,7 @@ Built with [ratatui](https://github.com/ratatui/ratatui), [crossterm](https://gi
 - **Split-screen TUI** — file list on the left, diff/details on the right
 - **Interactive staging** — toggle file staging with Spacebar
 - **Color-coded diff viewer** — additions, deletions, and headers in distinct colors
+- **Commit history tree** — browse commits with tree graph visualization and full details
 - **Tabbed interface** — Status, Stage Files, Commit, Branches views
 - **Vim-style navigation** — j/k or arrow keys to move around
 - **Live status** — real-time Git status from libgit2
@@ -66,7 +67,8 @@ git-ezy
 | `Tab` | Next tab |
 | `Shift+Tab` | Previous tab |
 | `Space` | Toggle staging (Stage Files tab) |
-| `Enter` | View diff of selected file (Status tab) |
+| `PgUp` / `PgDn` | Scroll diff/details pane up/down |
+| `Enter` | View diff of selected file (Status tab) / View commit details (Commit tab) |
 | `q` / `Esc` | Quit |
 
 ### Tabs
@@ -75,7 +77,7 @@ git-ezy
 |---|---|
 | **Status** | View modified files and their diffs |
 | **Stage Files** | Stage/unstage files with Spacebar |
-| **Commit** | Commit view (coming soon) |
+| **Commit** | Browse commit history with tree graph visualization |
 | **Branches** | Branch management (coming soon) |
 
 ### Color coding
@@ -94,7 +96,6 @@ This is an early-stage project. The following are planned:
 
 - [ ] Commit message input and commit creation
 - [ ] Branch checkout and creation
-- [ ] Log/diff history view
 - [ ] Mouse support
 - [ ] Configurable keybindings
 
