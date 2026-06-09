@@ -2,6 +2,12 @@
 name = "git-ezy"
 version = "0.1.0"
 edition = "2024"
+description = "A modern, interactive Terminal UI for Git — navigate repos visually without memorizing CLI commands"
+keywords = ["git", "tui", "terminal", "ratatui", "git-client"]
+categories = ["command-line-utilities", "development-tools::git"]
+authors = ["Pallav Rai"]
+repository = "https://github.com/Pallavrai/git-ezy"
+license = "MIT"
 
 [dependencies]
 ratatui = "0.29"
