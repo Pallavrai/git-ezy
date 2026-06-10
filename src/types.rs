@@ -1,6 +1,6 @@
 use git2::{Oid, Status};
 
-pub const MENU_ITEMS: &[&str] = &["Status", "Changes", "Commit", "Branches"];
+pub const MENU_ITEMS: &[&str] = &["Status", "Changes", "Commit Graph", "Branches"];
 pub const SCROLL_STEP: usize = 8;
 
 #[derive(Debug, Clone)]
