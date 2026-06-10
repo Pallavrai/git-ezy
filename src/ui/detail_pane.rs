@@ -65,7 +65,45 @@ impl App {
                 }
             }
             1 => {
-                if self.files.is_empty() {
+                if self.commit_mode {
+                    let staged_count = self
+                        .files
+                        .iter()
+                        .filter(|f| {
+                            f.status.intersects(
+                                git2::Status::INDEX_NEW
+                                    | git2::Status::INDEX_MODIFIED
+                                    | git2::Status::INDEX_DELETED,
+                            )
+                        })
+                        .count();
+                    let msg = if self.commit_message.is_empty() {
+                        "  (type commit message)".to_string()
+                    } else {
+                        self.commit_message.clone()
+                    };
+                    Text::from(vec![
+                        Line::from(Span::styled(
+                            "  Commit Message:",
+                            Style::default().fg(Color::Gray),
+                        )),
+                        Line::from(""),
+                        Line::from(Span::styled(
+                            msg,
+                            Style::default().fg(Color::White),
+                        )),
+                        Line::from(""),
+                        Line::from(Span::styled(
+                            format!("  Staged files: {}", staged_count),
+                            Style::default().fg(Color::Green),
+                        )),
+                        Line::from(""),
+                        Line::from(Span::styled(
+                            "  Enter:Commit  ^C:Cancel  Type to edit",
+                            Style::default().fg(Color::Cyan),
+                        )),
+                    ])
+                } else if self.files.is_empty() {
                     Text::from(Line::from(Span::styled(
                         "  No changes.",
                         Style::default().fg(Color::Gray),
@@ -84,6 +122,11 @@ impl App {
                         Line::from(Span::styled(
                             "  d  Discard All",
                             Style::default().fg(Color::Red),
+                        )),
+                        Line::from(""),
+                        Line::from(Span::styled(
+                            "  ^C  Commit",
+                            Style::default().fg(Color::Cyan),
                         )),
                     ])
                 }

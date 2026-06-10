@@ -18,6 +18,8 @@ pub struct App {
     pub selected_branch: usize,
     pub scroll_offset: usize,
     pub focus: Focus,
+    pub commit_message: String,
+    pub commit_mode: bool,
 }
 
 impl App {
@@ -45,6 +47,8 @@ impl App {
             selected_branch: 0,
             scroll_offset: 0,
             focus: Focus::List,
+            commit_message: String::new(),
+            commit_mode: false,
         };
         app.refresh_status();
         app.load_commits();

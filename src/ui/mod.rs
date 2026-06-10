@@ -90,7 +90,9 @@ impl App {
             Focus::List => "List",
             Focus::Detail => "Detail",
         };
-        let base = if self.focus == Focus::Detail {
+        let base = if self.current_tab == 1 && self.commit_mode {
+                "Type to edit  Enter:Commit  ^C:Cancel"
+        } else if self.focus == Focus::Detail {
                 match self.current_tab {
                     0 => "↑↓/PgUp/PgDn Scroll  Enter:List  ^R:Refresh  q:Quit",
                     1 => "↑↓/PgUp/PgDn Scroll  Enter:List  ^R:Refresh  q:Quit",
@@ -101,7 +103,7 @@ impl App {
         } else {
                 match self.current_tab {
                     0 => "↑↓ Files  Enter:View → Detail  Tab:Switch  ^R:Refresh  q:Quit",
-                    1 => "↑↓ Files  a:Stage All  u:Unstage  d:Discard  Enter:View → Detail  ^R:Refresh  q:Quit",
+                    1 => "↑↓ Files  a:Stage All  u:Unstage  d:Discard  ^C:Commit  Enter:View → Detail  ^R:Refresh  q:Quit",
                     2 => "↑↓ Commits  Enter:Detail  ^R:Refresh  q:Quit",
                     3 => "↑↓ Branches  c:Checkout  Enter:View → Detail  ^R:Refresh  q:Quit",
                     _ => "Tab:Switch  ^R:Refresh  q:Quit",

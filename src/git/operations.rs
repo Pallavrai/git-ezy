@@ -262,4 +262,39 @@ impl App {
 
         self.recompute_tree();
     }
+
+    pub fn perform_commit(&mut self) -> Result<()> {
+        let msg = self.commit_message.trim().to_string();
+        if msg.is_empty() {
+            return Ok(());
+        }
+        let has_staged = self.files.iter().any(|f| {
+            f.status.intersects(
+                Status::INDEX_NEW | Status::INDEX_MODIFIED | Status::INDEX_DELETED,
+            )
+        });
+        if !has_staged {
+            return Ok(());
+        }
+        if let Some(repo) = &self.repo {
+            let head = repo.head()?;
+            let parent = head.peel_to_commit()?;
+            let tree_oid = repo.index()?.write_tree()?;
+            let tree = repo.find_tree(tree_oid)?;
+            let signature = repo.signature()?;
+            repo.commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                &msg,
+                &tree,
+                &[&parent],
+            )?;
+        }
+        self.commit_message.clear();
+        self.commit_mode = false;
+        self.refresh_status();
+        self.load_commits();
+        Ok(())
+    }
 }

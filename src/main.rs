@@ -110,6 +110,25 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
                     eprintln!("Discard error: {e}");
                 }
             }
+            (KeyCode::Char('c'), KeyModifiers::CONTROL) if app.current_tab == 1 => {
+                app.commit_mode = !app.commit_mode;
+                if !app.commit_mode {
+                    app.commit_message.clear();
+                }
+            }
+            (KeyCode::Char(c), KeyModifiers::NONE)
+                if app.current_tab == 1 && app.commit_mode =>
+            {
+                app.commit_message.push(c);
+            }
+            (KeyCode::Backspace, _) if app.current_tab == 1 && app.commit_mode => {
+                app.commit_message.pop();
+            }
+            (KeyCode::Enter, _) if app.current_tab == 1 && app.commit_mode => {
+                if let Err(e) = app.perform_commit() {
+                    eprintln!("Commit error: {e}");
+                }
+            }
             (KeyCode::Char('c'), _) if app.current_tab == 3 && app.focus == Focus::List => {
                 if let Some(branch) = app.branches.get(app.selected_branch) {
                     let name = branch.name.clone();
