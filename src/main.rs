@@ -83,6 +83,9 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
             (KeyCode::Tab, _) => {
                 app.next_tab();
             }
+            (KeyCode::Char('r'), KeyModifiers::CONTROL) => {
+                app.refresh();
+            }
             (KeyCode::BackTab, _) | (KeyCode::Char('t'), KeyModifiers::SHIFT) => {
                 app.previous_tab();
             }
@@ -98,6 +101,16 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
                 }
             }
             (KeyCode::Char('c'), _) if app.current_tab == 3 && app.focus == Focus::List => {
+                if let Some(branch) = app.branches.get(app.selected_branch) {
+                    let name = branch.name.clone();
+                    if !branch.is_current
+                        && let Err(e) = app.checkout_branch(&name)
+                    {
+                        eprintln!("Checkout error: {e}");
+                    }
+                }
+            }
+            (KeyCode::Enter, _) if app.current_tab == 3 && app.focus == Focus::List => {
                 if let Some(branch) = app.branches.get(app.selected_branch) {
                     let name = branch.name.clone();
                     if !branch.is_current

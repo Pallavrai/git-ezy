@@ -245,6 +245,27 @@ impl App {
         self.scroll_offset = self.scroll_offset.saturating_add(SCROLL_STEP);
     }
 
+    pub fn refresh(&mut self) {
+        self.repo = git2::Repository::open(".").ok();
+        self.branch = self
+            .repo
+            .as_ref()
+            .and_then(|r| r.head().ok())
+            .and_then(|h| h.shorthand().map(String::from))
+            .unwrap_or_else(|| "detached".into());
+        self.refresh_status();
+        self.load_commits();
+        self.load_branches();
+        if self.current_tab == 0 || self.current_tab == 1 {
+            if self.focus == Focus::Detail {
+                let _ = self.update_diff();
+            }
+        }
+        if self.current_tab == 2 {
+            self.update_commit_detail();
+        }
+    }
+
     pub fn scroll_up(&mut self) {
         self.scroll_offset = self.scroll_offset.saturating_sub(SCROLL_STEP);
     }
