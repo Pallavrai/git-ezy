@@ -94,15 +94,15 @@ impl App {
                 match self.current_tab {
                     0 => "↑↓/PgUp/PgDn Scroll  Enter:List  ^R:Refresh  q:Quit",
                     1 => "↑↓/PgUp/PgDn Scroll  Enter:List  ^R:Refresh  q:Quit",
-                    2 => "↑↓/PgUp/PgDn Scroll  Enter:List  c:Commit  ^R:Refresh  q:Quit",
+                    2 => "↑↓/PgUp/PgDn Scroll  Enter:List  ^R:Refresh  q:Quit",
                     3 => "↑↓/PgUp/PgDn Scroll  Enter:List  ^R:Refresh  q:Quit",
                     _ => "PgUp/PgDn Scroll  Tab:Switch  ^R:Refresh  q:Quit",
                 }
         } else {
                 match self.current_tab {
                     0 => "↑↓ Files  Enter:View → Detail  Tab:Switch  ^R:Refresh  q:Quit",
-                    1 => "↑↓ Files  Space:Stage  Enter:View → Detail  ^R:Refresh  q:Quit",
-                    2 => "↑↓ Commits  Type:message  Enter:Detail  c:Commit  ^R:Refresh  q:Quit",
+                    1 => "↑↓ Files  a:Stage All  u:Unstage  d:Discard  Enter:View → Detail  ^R:Refresh  q:Quit",
+                    2 => "↑↓ Commits  Enter:Detail  ^R:Refresh  q:Quit",
                     3 => "↑↓ Branches  c:Checkout  Enter:View → Detail  ^R:Refresh  q:Quit",
                     _ => "Tab:Switch  ^R:Refresh  q:Quit",
                 }

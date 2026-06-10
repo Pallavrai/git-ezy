@@ -95,9 +95,19 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
             (KeyCode::PageUp, _) => {
                 app.scroll_up();
             }
-            (KeyCode::Char(' '), _) if app.current_tab == 1 => {
-                if let Err(e) = app.toggle_stage() {
-                    eprintln!("Stage error: {e}");
+            (KeyCode::Char('a'), _) if app.current_tab == 1 => {
+                if let Err(e) = app.stage_all() {
+                    eprintln!("Stage all error: {e}");
+                }
+            }
+            (KeyCode::Char('u'), _) if app.current_tab == 1 => {
+                if let Err(e) = app.unstage_all() {
+                    eprintln!("Unstage error: {e}");
+                }
+            }
+            (KeyCode::Char('d'), _) if app.current_tab == 1 => {
+                if let Err(e) = app.discard_all() {
+                    eprintln!("Discard error: {e}");
                 }
             }
             (KeyCode::Char('c'), _) if app.current_tab == 3 && app.focus == Focus::List => {
@@ -122,23 +132,6 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
             }
             (KeyCode::Enter, _) => {
                 app.toggle_focus();
-            }
-            (KeyCode::Char('c'), _)
-                if app.current_tab == 2
-                    && app.focus == Focus::List
-                    && !app.commit_message.is_empty() =>
-            {
-                if let Err(e) = app.perform_commit() {
-                    eprintln!("Commit error: {e}");
-                }
-            }
-            (KeyCode::Backspace, _) if app.current_tab == 2 && app.focus == Focus::List => {
-                app.commit_message.pop();
-            }
-            (KeyCode::Char(c), KeyModifiers::NONE)
-                if app.current_tab == 2 && app.focus == Focus::List =>
-            {
-                app.commit_message.push(c);
             }
             _ => {}
         }

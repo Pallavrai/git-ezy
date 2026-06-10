@@ -11,7 +11,7 @@ use crate::types::MENU_ITEMS;
 
 impl App {
     pub(super) fn render_tab_bar(&self, frame: &mut Frame, area: Rect) {
-        let widths = [12, 16, 12, 14];
+        let widths = [12, 12, 12, 14];
         let tabs_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(

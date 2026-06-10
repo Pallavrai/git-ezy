@@ -1,4 +1,3 @@
-use git2::Status;
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
@@ -20,19 +19,7 @@ impl App {
                 let selected = i == self.selected_index;
                 let (status_char, status_color) = Self::status_style(file.status);
 
-                let staged_marker = if self.current_tab == 1
-                    && file.status.intersects(
-                        Status::INDEX_NEW
-                            | Status::INDEX_MODIFIED
-                            | Status::INDEX_DELETED,
-                    )
-                {
-                    Span::styled(" ✓", Style::default().fg(Color::Green))
-                } else if self.current_tab == 1 {
-                    Span::styled("  ", Style::default())
-                } else {
-                    Span::styled("", Style::default())
-                };
+                let staged_marker = Span::styled("", Style::default());
 
                 let status_tag = Span::styled(
                     format!(" {} ", status_char),

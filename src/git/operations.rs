@@ -23,7 +23,7 @@ impl App {
                 None => continue,
             };
             let status = entry.status();
-            if status != Status::CURRENT {
+            if status != Status::CURRENT && !status.intersects(Status::IGNORED) {
                 self.files.push(crate::types::FileItem { path, status });
             }
         }
@@ -32,78 +32,77 @@ impl App {
             .min(self.files.len().saturating_sub(1));
     }
 
-    pub fn toggle_stage(&mut self) -> Result<()> {
+    pub fn stage_all(&mut self) -> Result<()> {
         let repo = match &self.repo {
             Some(r) => r,
             None => return Ok(()),
         };
-        if self.files.is_empty() {
-            return Ok(());
-        }
-        let item = &self.files[self.selected_index];
-        let path = std::path::Path::new(&item.path);
-
-        let is_staged = item.status.intersects(
-            Status::INDEX_NEW
-                | Status::INDEX_MODIFIED
-                | Status::INDEX_DELETED
-                | Status::INDEX_RENAMED
-                | Status::INDEX_TYPECHANGE,
-        );
-
-        if is_staged {
-            let restored = {
-                if let Ok(tree) = repo.head().and_then(|h| h.peel_to_tree()) {
-                    if let Ok(tree_entry) = tree.get_path(path) {
-                        if let Ok(obj) = tree_entry.to_object(repo) {
-                            if let Ok(blob) = obj.peel_to_blob() {
-                                let mut index = repo.index()?;
-                                let entry = git2::IndexEntry {
-                                    ctime: git2::IndexTime::new(0, 0),
-                                    mtime: git2::IndexTime::new(0, 0),
-                                    dev: 0,
-                                    ino: 0,
-                                    mode: tree_entry.filemode() as u32,
-                                    uid: 0,
-                                    gid: 0,
-                                    file_size: 0,
-                                    id: blob.id(),
-                                    flags: 0,
-                                    flags_extended: 0,
-                                    path: path.to_str().unwrap_or("").to_string().into_bytes(),
-                                };
-                                index.add_frombuffer(&entry, blob.content())?;
-                                index.write()?;
-                                true
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-            };
-            if !restored {
-                let mut index = repo.index()?;
-                index.remove_path(path)?;
-                index.write()?;
+        let mut index = repo.index()?;
+        for item in &self.files {
+            let path = std::path::Path::new(&item.path);
+            let is_staged = item.status.intersects(
+                Status::INDEX_NEW
+                    | Status::INDEX_MODIFIED
+                    | Status::INDEX_DELETED
+                    | Status::INDEX_RENAMED
+                    | Status::INDEX_TYPECHANGE,
+            );
+            if is_staged {
+                continue;
             }
-        } else if item.status == Status::WT_DELETED {
-            let mut index = repo.index()?;
-            index.remove_path(path)?;
-            index.write()?;
-        } else {
-            let mut index = repo.index()?;
-            index.add_path(path)?;
-            index.write()?;
+            if item.status == Status::WT_DELETED {
+                index.remove_path(path)?;
+            } else {
+                index.add_path(path)?;
+            }
+        }
+        index.write()?;
+        self.refresh_status();
+        if self.current_tab == 0 || self.current_tab == 1 {
+            let _ = self.update_diff();
+        }
+        Ok(())
+    }
+
+    pub fn unstage_all(&mut self) -> Result<()> {
+        let repo = match &self.repo {
+            Some(r) => r,
+            None => return Ok(()),
+        };
+        if let Ok(head) = repo.head().and_then(|h| h.peel_to_commit()) {
+            repo.reset(head.as_object(), git2::ResetType::Mixed, None)?;
         }
         self.refresh_status();
-        self.update_diff()?;
+        if self.current_tab == 0 || self.current_tab == 1 {
+            let _ = self.update_diff();
+        }
+        Ok(())
+    }
+
+    pub fn discard_all(&mut self) -> Result<()> {
+        let repo = match &self.repo {
+            Some(r) => r,
+            None => return Ok(()),
+        };
+        let untracked: Vec<std::path::PathBuf> = self
+            .files
+            .iter()
+            .filter(|f| f.status == Status::WT_NEW)
+            .map(|f| std::path::PathBuf::from(&f.path))
+            .collect();
+        if let Ok(head) = repo.head().and_then(|h| h.peel_to_commit()) {
+            repo.reset(head.as_object(), git2::ResetType::Hard, None)?;
+        }
+        for path in &untracked {
+            let _ = std::fs::remove_file(path);
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::remove_dir(parent);
+            }
+        }
+        self.refresh_status();
+        if self.current_tab == 0 || self.current_tab == 1 {
+            let _ = self.update_diff();
+        }
         Ok(())
     }
 
@@ -262,39 +261,5 @@ impl App {
         }
 
         self.recompute_tree();
-    }
-
-    pub fn perform_commit(&mut self) -> Result<()> {
-        let msg = self.commit_message.trim().to_string();
-        if msg.is_empty() {
-            return Ok(());
-        }
-        let has_staged = self.files.iter().any(|f| {
-            f.status.intersects(
-                Status::INDEX_NEW | Status::INDEX_MODIFIED | Status::INDEX_DELETED,
-            )
-        });
-        if !has_staged {
-            return Ok(());
-        }
-        if let Some(repo) = &self.repo {
-            let head = repo.head()?;
-            let parent = head.peel_to_commit()?;
-            let tree_oid = repo.index()?.write_tree()?;
-            let tree = repo.find_tree(tree_oid)?;
-            let signature = repo.signature()?;
-            repo.commit(
-                Some("HEAD"),
-                &signature,
-                &signature,
-                &msg,
-                &tree,
-                &[&parent],
-            )?;
-        }
-        self.commit_message.clear();
-        self.refresh_status();
-        self.load_commits();
-        Ok(())
     }
 }
