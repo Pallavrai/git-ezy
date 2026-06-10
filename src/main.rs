@@ -121,6 +121,12 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
             (KeyCode::PageUp, _) => {
                 app.scroll_up();
             }
+            (KeyCode::Char('h'), _) if app.current_tab == 2 => {
+                app.scroll_left();
+            }
+            (KeyCode::Char('l'), _) if app.current_tab == 2 => {
+                app.scroll_right();
+            }
             (KeyCode::Char('a'), _) if app.current_tab == 1 => {
                 if let Err(e) = app.stage_all() {
                     eprintln!("Stage all error: {e}");

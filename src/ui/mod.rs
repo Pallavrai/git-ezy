@@ -26,9 +26,14 @@ impl App {
             ])
             .split(frame.area());
 
+        let (left_pct, right_pct) = if self.current_tab == 2 {
+            (65, 35)
+        } else {
+            (35, 65)
+        };
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
+            .constraints([Constraint::Percentage(left_pct), Constraint::Percentage(right_pct)])
             .split(main[1]);
 
         self.render_tab_bar(frame, main[0]);
@@ -96,7 +101,7 @@ impl App {
                 match self.current_tab {
                     0 => "↑↓/PgUp/PgDn Scroll  Enter:List  ^R:Refresh  q:Quit",
                     1 => "↑↓/PgUp/PgDn Scroll  Enter:List  ^R:Refresh  q:Quit",
-                    2 => "↑↓/PgUp/PgDn Scroll  Enter:List  ^R:Refresh  q:Quit",
+                    2 => "↑↓/PgUp/PgDn Scroll Detail  h/l:Scroll Graph  Enter:List  ^R:Refresh  q:Quit",
                     3 => "↑↓/PgUp/PgDn Scroll  Enter:List  ^R:Refresh  q:Quit",
                     _ => "PgUp/PgDn Scroll  Tab:Switch  ^R:Refresh  q:Quit",
                 }
@@ -104,7 +109,7 @@ impl App {
                 match self.current_tab {
                     0 => "↑↓ Files  Enter:View → Detail  Tab:Switch  ^R:Refresh  q:Quit",
                     1 => "↑↓ Files  a:Stage All  u:Unstage  d:Discard  ^C:Commit  Enter:View → Detail  ^R:Refresh  q:Quit",
-                    2 => "↑↓ Commits  Enter:Detail  ^R:Refresh  q:Quit",
+                    2 => "↑↓ Commits  h/l:Scroll Graph  Enter:Detail  ^R:Refresh  q:Quit",
                     3 => "↑↓ Branches  c:Checkout  Enter:View → Detail  ^R:Refresh  q:Quit",
                     _ => "Tab:Switch  ^R:Refresh  q:Quit",
                 }

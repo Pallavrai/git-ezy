@@ -17,6 +17,8 @@ pub struct App {
     pub branches: Vec<BranchEntry>,
     pub selected_branch: usize,
     pub scroll_offset: usize,
+    pub list_scroll_offset: usize,
+    pub h_scroll_offset: usize,
     pub focus: Focus,
     pub commit_message: String,
     pub commit_mode: bool,
@@ -46,6 +48,8 @@ impl App {
             branches: Vec::new(),
             selected_branch: 0,
             scroll_offset: 0,
+            list_scroll_offset: 0,
+            h_scroll_offset: 0,
             focus: Focus::List,
             commit_message: String::new(),
             commit_mode: false,
@@ -117,6 +121,7 @@ impl App {
                 }
                 self.selected_commit =
                     (self.selected_commit + 1) % self.commits.len();
+                self.list_scroll_offset = self.selected_commit;
                 self.update_commit_detail();
             }
             3 => {
@@ -156,6 +161,7 @@ impl App {
                 } else {
                     self.selected_commit - 1
                 };
+                self.list_scroll_offset = self.selected_commit;
                 self.update_commit_detail();
             }
             3 => {
@@ -216,6 +222,8 @@ impl App {
         self.selected_index = 0;
         self.selected_commit = 0;
         self.selected_branch = 0;
+        self.list_scroll_offset = 0;
+        self.h_scroll_offset = 0;
         self.focus = Focus::List;
         if self.current_tab == 0 || self.current_tab == 1 {
             let _ = self.update_diff();
@@ -234,6 +242,8 @@ impl App {
         self.selected_index = 0;
         self.selected_commit = 0;
         self.selected_branch = 0;
+        self.list_scroll_offset = 0;
+        self.h_scroll_offset = 0;
         self.focus = Focus::List;
         if self.current_tab == 0 || self.current_tab == 1 {
             let _ = self.update_diff();
@@ -270,5 +280,13 @@ impl App {
 
     pub fn scroll_up(&mut self) {
         self.scroll_offset = self.scroll_offset.saturating_sub(SCROLL_STEP);
+    }
+
+    pub fn scroll_right(&mut self) {
+        self.h_scroll_offset = self.h_scroll_offset.saturating_add(SCROLL_STEP);
+    }
+
+    pub fn scroll_left(&mut self) {
+        self.h_scroll_offset = self.h_scroll_offset.saturating_sub(SCROLL_STEP);
     }
 }

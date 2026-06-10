@@ -1,8 +1,8 @@
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem},
+    text::{Line, Span, Text},
+    widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
@@ -12,7 +12,7 @@ use crate::types;
 impl App {
     pub(super) fn render_commit_list(&self, frame: &mut Frame, area: Rect) {
         let title = format!(" History ({}) ", self.commits.len());
-        let items: Vec<ListItem> = self
+        let lines: Vec<Line> = self
             .commits
             .iter()
             .enumerate()
@@ -27,7 +27,6 @@ impl App {
                     .map(|s| s.as_str())
                     .unwrap_or("");
 
-                let dot = if selected { "▶" } else { " " };
                 let hash_color = if selected { Color::Black } else { Color::Yellow };
                 let ref_str = if !commit.refs.is_empty() {
                     format!(" ({})", commit.refs.join(", "))
@@ -43,10 +42,6 @@ impl App {
                 };
 
                 let spans = vec![
-                    Span::styled(
-                        dot.to_string(),
-                        Style::default().fg(Color::Cyan).bg(bg),
-                    ),
                     Span::styled(
                         tree,
                         Style::default().fg(if selected { Color::Black } else { Color::Cyan }).bg(bg),
@@ -74,17 +69,25 @@ impl App {
                     ),
                 ];
 
-                ListItem::new(Line::from(spans))
+                Line::from(spans)
             })
             .collect();
 
-        let list = List::new(items).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(self.pane_border_style(false))
-                .title(title.as_str())
-                .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-        );
-        frame.render_widget(list, area);
+        let text = Text::from(lines);
+        let view_h = area.height.saturating_sub(2) as usize;
+
+        let vert = self
+            .list_scroll_offset
+            .min(text.height().saturating_sub(view_h));
+        let para = Paragraph::new(text)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(self.pane_border_style(false))
+                    .title(title.as_str())
+                    .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            )
+            .scroll((vert as u16, self.h_scroll_offset as u16));
+        frame.render_widget(para, area);
     }
 }
