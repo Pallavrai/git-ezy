@@ -70,6 +70,32 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
             return Ok(());
         }
 
+        if app.current_tab == 1 && app.commit_mode {
+            match key.code {
+                KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => {
+                    app.commit_mode = false;
+                    app.commit_message.clear();
+                }
+                KeyCode::Esc => {
+                    app.commit_mode = false;
+                    app.commit_message.clear();
+                }
+                KeyCode::Enter => {
+                    if let Err(e) = app.perform_commit() {
+                        eprintln!("Commit error: {e}");
+                    }
+                }
+                KeyCode::Backspace => {
+                    app.commit_message.pop();
+                }
+                KeyCode::Char(c) => {
+                    app.commit_message.push(c);
+                }
+                _ => {}
+            }
+            return Ok(());
+        }
+
         match (key.code, key.modifiers) {
             (KeyCode::Char('q'), _) | (KeyCode::Esc, _) => {
                 app.should_quit = true;
@@ -111,23 +137,7 @@ fn handle_event(app: &mut App, event: Event) -> Result<()> {
                 }
             }
             (KeyCode::Char('c'), KeyModifiers::CONTROL) if app.current_tab == 1 => {
-                app.commit_mode = !app.commit_mode;
-                if !app.commit_mode {
-                    app.commit_message.clear();
-                }
-            }
-            (KeyCode::Char(c), KeyModifiers::NONE)
-                if app.current_tab == 1 && app.commit_mode =>
-            {
-                app.commit_message.push(c);
-            }
-            (KeyCode::Backspace, _) if app.current_tab == 1 && app.commit_mode => {
-                app.commit_message.pop();
-            }
-            (KeyCode::Enter, _) if app.current_tab == 1 && app.commit_mode => {
-                if let Err(e) = app.perform_commit() {
-                    eprintln!("Commit error: {e}");
-                }
+                app.commit_mode = true;
             }
             (KeyCode::Char('c'), _) if app.current_tab == 3 && app.focus == Focus::List => {
                 if let Some(branch) = app.branches.get(app.selected_branch) {
